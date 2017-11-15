@@ -190,7 +190,17 @@ class FullyConnectedNet(object):
         # beta2, etc. Scale parameters should be initialized to one and shift      #
         # parameters should be initialized to zero.                                #
         ############################################################################
-        pass
+
+        for i in range(0, len(hidden_dims) + 1):
+            layer_input_dim = input_dim if i == 0 else hidden_dims[i - 1]
+            layer_output_dim = num_classes if i == len(hidden_dims) else hidden_dims[i]
+            self.params['W%s' % (i+1)] = np.random.normal(
+                0, weight_scale, (layer_input_dim, layer_output_dim)
+            )
+            self.params['b%s' % (i+1)] = np.zeros(layer_output_dim)
+            #self.params['W2'] = np.random.normal(0, weight_scale, (hidden_dim, num_classes))
+            #self.params['b2'] = np.zeros(num_classes)
+
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -235,7 +245,6 @@ class FullyConnectedNet(object):
             for bn_param in self.bn_params:
                 bn_param['mode'] = mode
 
-        scores = None
         ############################################################################
         # TODO: Implement the forward pass for the fully-connected net, computing  #
         # the class scores for X and storing them in the scores variable.          #
@@ -248,7 +257,26 @@ class FullyConnectedNet(object):
         # self.bn_params[1] to the forward pass for the second batch normalization #
         # layer, etc.                                                              #
         ############################################################################
-        pass
+
+        # N = X.shape[0]
+        # D = np.product(X.shape[1:])
+        # X_reshaped = X.reshape(N, D)
+        activation_cache = {}
+
+        # Forward
+        layer_activation = X.copy()# X_reshaped
+        for i in range(0, self.num_layers):
+            W = self.params['W%s' % (i+1)]
+            b = self.params['b%s' % (i+1)]
+            f = affine_forward if i == self.num_layers - 1 else affine_relu_forward
+            #print("forward", "a", f, 'W%s' % (i+1), 'b%s' % (i+1))
+            layer_activation, activation_cache[i] = f(layer_activation, W, b)
+            # self.params['h%s' % (i+1)] = layer_activation
+
+
+            #h1, h1_cache = affine_relu_forward(X_reshaped, W1, b1)
+        #scores, scores_cache = affine_forward(layer_activation, W2, b2)
+        scores = layer_activation
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -271,9 +299,33 @@ class FullyConnectedNet(object):
         # automated tests, make sure that your L2 regularization includes a factor #
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
-        pass
+
+        # Compute loss
+        loss, dLoss = softmax_loss(scores, y)
+        for i in range(0, self.num_layers):
+            loss += 0.5 * self.reg * np.sum(self.params['W%s' % (i + 1)] * self.params['W%s' % (i + 1)])
+
+            # loss += 0.5 * self.reg * np.sum(W2 * W2)
+
+        dActivation = dLoss
+        for i in reversed(range(0, self.num_layers)):
+            f = affine_backward if i == self.num_layers - 1 else affine_relu_backward
+            dActivation, grads["W%s" % (i+1)], grads["b%s" % (i+1)] = \
+                f(dActivation, activation_cache[i])
+            #print("backward pass with ", i, " ", f, "dh%s" % (i+1), "dW%s" % (i+1), "db%s" % (i+1))
+            # = grads["h%s" % (i+1)]
+
+        #dh1, dW2, db2 = affine_backward(dLoss, scores_cache)
+        #dX, dW1, db1 = affine_relu_backward(dh1, h1_cache)
+
+        for i in range(0, self.num_layers):
+            grads['W%s' % (i+1)] += self.reg * self.params['W%s' % (i+1)]
+        #grads['W1'] = dW1 + self.reg * W1
+        #grads['b1'] = db1
+        #grads['W2'] = dW2 + self.reg * W2
+        #grads['b2'] = db2
+
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
-
         return loss, grads
