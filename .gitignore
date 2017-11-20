@@ -4,8 +4,10 @@ spring1617_assignment1.zip
 .DS_Store
 spring1617_assignment2.zip
 *~
-.env/*
+**/.env/*
 assignment1/cs231n/datasets/*
 assignment2/cs231n/datasets/*
 assignment3/cs231n/datasets/*
-.ipynb_checkpoints/
+**/.ipynb_checkpoints/*
+**/__pycache__/*
+
