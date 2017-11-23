@@ -5,6 +5,19 @@ import numpy as np
 from cs231n.layers import *
 from cs231n.layer_utils import *
 
+def abr_forward(x, w, b, gamma, beta, bn_param):
+    aff, aff_cache = affine_forward(x, w, b)
+    bn, bn_cache = batchnorm_forward(aff, gamma, beta, bn_param)
+    out, relu_cache = relu_forward(bn)
+    cache = (aff_cache, bn_cache, relu_cache)
+    return out, cache
+
+def abr_backward(dout, cache):
+    aff_cache, bn_cache, relu_cache = cache
+    dr = relu_backward(dout, relu_cache)
+    dbn, dgamma, dbeta = batchnorm_backward(dr, bn_cache)
+    dx, dw, db = affine_backward(dbn, aff_cache)
+    return dx, dw, db, dgamma, dbeta
 
 class TwoLayerNet(object):
     """
@@ -198,6 +211,9 @@ class FullyConnectedNet(object):
                 0, weight_scale, (layer_input_dim, layer_output_dim)
             )
             self.params['b%s' % (i+1)] = np.zeros(layer_output_dim)
+            if self.use_batchnorm and i < self.num_layers - 1:
+                self.params['gamma%s' % (i + 1)] = np.ones(layer_output_dim)
+                self.params['beta%s' % (i + 1)] = np.zeros(layer_output_dim)
             #self.params['W2'] = np.random.normal(0, weight_scale, (hidden_dim, num_classes))
             #self.params['b2'] = np.zeros(num_classes)
 
@@ -268,9 +284,25 @@ class FullyConnectedNet(object):
         for i in range(0, self.num_layers):
             W = self.params['W%s' % (i+1)]
             b = self.params['b%s' % (i+1)]
-            f = affine_forward if i == self.num_layers - 1 else affine_relu_forward
+            # f = affine_forward if i == self.num_layers - 1 else affine_relu_forward
+            if i == self.num_layers - 1:
+                layer_activation, activation_cache[i] = affine_forward(
+                    layer_activation, W, b
+                )
+            else:
+                if self.use_batchnorm:
+                    gamma = self.params['gamma%s' % (i + 1)]
+                    beta = self.params['beta%s' % (i + 1)]
+                    layer_activation, activation_cache[i] = abr_forward(
+                        layer_activation, W, b, gamma, beta, self.bn_params[i]
+                    )
+                else:
+                    layer_activation, activation_cache[i] = affine_relu_forward(
+                        layer_activation, W, b
+                    )
+
             #print("forward", "a", f, 'W%s' % (i+1), 'b%s' % (i+1))
-            layer_activation, activation_cache[i] = f(layer_activation, W, b)
+
             # self.params['h%s' % (i+1)] = layer_activation
 
 
@@ -309,9 +341,21 @@ class FullyConnectedNet(object):
 
         dActivation = dLoss
         for i in reversed(range(0, self.num_layers)):
-            f = affine_backward if i == self.num_layers - 1 else affine_relu_backward
-            dActivation, grads["W%s" % (i+1)], grads["b%s" % (i+1)] = \
-                f(dActivation, activation_cache[i])
+            # f = affine_backward if i == self.num_layers - 1 else affine_relu_backward
+            if i == self.num_layers - 1:
+                dActivation, grads["W%s" % (i+1)], grads["b%s" % (i+1)] = affine_backward(
+                    dActivation, activation_cache[i]
+                )
+            else:
+                if self.use_batchnorm:
+                    dActivation, grads["W%s" % (i + 1)], grads["b%s" % (i + 1)], \
+                    grads["gamma%s" % (i + 1)], grads["beta%s" % (i + 1)], = abr_backward(
+                        dActivation, activation_cache[i]
+                    )
+                else:
+                    dActivation, grads["W%s" % (i + 1)], grads["b%s" % (i + 1)] = affine_relu_backward(
+                        dActivation, activation_cache[i]
+                    )
             #print("backward pass with ", i, " ", f, "dh%s" % (i+1), "dW%s" % (i+1), "db%s" % (i+1))
             # = grads["h%s" % (i+1)]
 
