@@ -178,7 +178,19 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # variance, storing your result in the running_mean and running_var   #
         # variables.                                                          #
         #######################################################################
-        pass
+        mu = np.mean(x, axis=0)
+        xmu = x - mu
+        sq = xmu ** 2
+        var = np.mean(sq, axis=0)
+        sqrtvar = np.sqrt(var + eps)
+        invvar = 1. / sqrtvar
+        xhat = xmu * invvar
+        gxhat = gamma * xhat
+        out = gxhat + beta
+        # cache = (xmu, var, sqrtvar, invvar, xhat, gamma, eps)
+        cache = (xhat, gamma, xmu, invvar, sqrtvar, var, eps, x, mu)
+        running_mean = running_mean * momentum + (mu * (1 - momentum))
+        running_var = running_var * momentum + (var * (1 - momentum))
         #######################################################################
         #                           END OF YOUR CODE                          #
         #######################################################################
@@ -189,7 +201,8 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # then scale and shift the normalized data using gamma and beta.      #
         # Store the result in the out variable.                               #
         #######################################################################
-        pass
+        x_normalized = (x - running_mean) / (np.sqrt(running_var) + eps)
+        out = gamma * x_normalized + beta
         #######################################################################
         #                          END OF YOUR CODE                           #
         #######################################################################
@@ -225,7 +238,45 @@ def batchnorm_backward(dout, cache):
     # TODO: Implement the backward pass for batch normalization. Store the    #
     # results in the dx, dgamma, and dbeta variables.                         #
     ###########################################################################
-    pass
+    # help: https://kratzert.github.io/2016/02/12/understanding-the-gradient-flow-through-the-batch-normalization-layer.html
+    # help: https://kevinzakka.github.io/2016/09/14/batch_normalization/
+
+    #xmu, var, sqrtvar, invvar, xhat, gamma, eps = cache
+    xhat, gamma, xmu, invvar, sqrtvar, var, eps, x, mu = cache
+    N, D = dout.shape
+    # 9
+    dbeta = np.sum(dout, axis=0)
+    dgxhat = dout
+
+    # 8
+    dgamma = np.sum(xhat * dgxhat, axis=0)
+    dxhat = gamma * dgxhat
+
+    # 7
+    dxmu1 = invvar * dxhat
+    dinvvar = np.sum(xmu * dxhat, axis=0)
+
+    # 6
+    dsqrtvar = (-1. / (sqrtvar ** 2)) * dinvvar
+
+    # 5
+    dvar = 1. / (2 * np.sqrt(var+eps)) * dsqrtvar
+
+    # 4
+    dsq = 1. / N * np.ones((N, D)) * dvar
+
+    # 3
+    dxmu2 = 2 * xmu * dsq
+    dxmu = dxmu1 + dxmu2
+
+    # 2
+    dx1 = dxmu
+    dmu = -np.sum(dxmu, axis=0)
+
+    # 1
+    dx2 = 1. / N * np.ones((N, D)) * dmu
+    dx = dx1 + dx2
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -255,7 +306,15 @@ def batchnorm_backward_alt(dout, cache):
     # should be able to compute gradients with respect to the inputs in a     #
     # single statement; our implementation fits on a single 80-character line.#
     ###########################################################################
-    pass
+    # Stolen from wendykan for debugging
+    xhat, gamma, xmu, ivar, sqrtvar, var, eps, x, mu = cache
+    N, D = dout.shape
+
+    dbeta = np.sum(dout, axis=0)
+    dgamma = np.sum((x - mu) * (var + eps) ** (-1. / 2.) * dout, axis=0)
+    dx = (1. / N) * gamma * (var + eps) ** (-1. / 2.) * (N * dout - np.sum(dout, axis=0)
+                                                         - (x - mu) * (var + eps) ** (-1.0) * np.sum(dout * (x - mu),
+                                                                                                     axis=0))
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
