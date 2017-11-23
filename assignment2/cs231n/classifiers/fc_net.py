@@ -300,6 +300,9 @@ class FullyConnectedNet(object):
                     layer_activation, activation_cache[i] = affine_relu_forward(
                         layer_activation, W, b
                     )
+                if self.use_dropout:
+                    layer_activation, dropout_cache = dropout_forward(layer_activation, self.dropout_param)
+                    activation_cache[i] = (activation_cache[i], dropout_cache)
 
             #print("forward", "a", f, 'W%s' % (i+1), 'b%s' % (i+1))
 
@@ -347,6 +350,9 @@ class FullyConnectedNet(object):
                     dActivation, activation_cache[i]
                 )
             else:
+                if self.use_dropout:
+                    activation_cache[i], dropout_cache = activation_cache[i]
+                    dActivation = dropout_backward(dActivation, dropout_cache)
                 if self.use_batchnorm:
                     dActivation, grads["W%s" % (i + 1)], grads["b%s" % (i + 1)], \
                     grads["gamma%s" % (i + 1)], grads["beta%s" % (i + 1)], = abr_backward(
