@@ -428,7 +428,7 @@ def conv_forward_naive(x, w, b, conv_param):
     ###########################################################################
     N, C, H, W = x.shape
     F, C, HH, WW = w.shape
-    print(F, C, HH, WW)
+    # print(F, C, HH, WW)
     stride, pad = conv_param['stride'], conv_param['pad']
     h_prime = int(1 + (H + 2 * pad - HH) / stride)
     w_prime = int(1 + (W + 2 * pad - WW) / stride)
@@ -444,8 +444,7 @@ def conv_forward_naive(x, w, b, conv_param):
                     w0 = j * stride
                     w1 = j * stride + WW
                     image_chunk = x_pad[n, :, h0:h1, w0:w1]
-                    pix_out = np.sum(image_chunk * w[f]) + b[f]
-                    out[n, f, i, j] = pix_out
+                    out[n, f, i, j] = np.sum(image_chunk * w[f]) + b[f]
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -470,7 +469,39 @@ def conv_backward_naive(dout, cache):
     ###########################################################################
     # TODO: Implement the convolutional backward pass.                        #
     ###########################################################################
-    pass
+    print("A")
+    x, w, b, conv_param = cache
+    print(dout.shape) # (N, C, H, W)
+    print(cache[0].shape, cache[1].shape, cache[2], cache[3])
+    print("B")
+    N, C, H, W = x.shape
+    F, C, HH, WW = w.shape
+    # print(F, C, HH, WW)
+    stride, pad = conv_param['stride'], conv_param['pad']
+    h_prime = int(1 + (H + 2 * pad - HH) / stride)
+    w_prime = int(1 + (W + 2 * pad - WW) / stride)
+    # out = np.empty((N, F, h_prime, w_prime))
+    x_pad = np.pad(x, [(0, 0), (0, 0), (pad, pad), (pad, pad)], mode='constant', constant_values=0)
+
+    dx = np.zeros_like(x_pad)
+    dw = np.zeros_like(w) # (F, C, HH, WW)
+    db = np.zeros_like(b)
+    for n in range(0, N):
+        for f in range(0, F):
+            for i in range(0, h_prime):
+                for j in range(0, w_prime):
+                    h0 = i * stride
+                    h1 = i * stride + HH
+                    w0 = j * stride
+                    w1 = j * stride + WW
+                    image_chunk = x_pad[n, :, h0:h1, w0:w1]
+                    dy = dout[n, f, i, j]
+
+                    dw[f] += image_chunk * dy
+                    db[f] += dy
+                    dx[n, :, h0:h1, w0:w1] += w[f] * dy
+
+    dx = dx[:, :, pad:pad + H, pad:pad + W]
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
