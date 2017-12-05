@@ -584,9 +584,9 @@ def max_pool_backward_naive(dout, cache):
             for i in range(0, h_out):
                 for j in range(0, w_out):
                     h0 = i * stride
-                    h1 = i * stride + pool_height
+                    # h1 = i * stride + pool_height
                     w0 = j * stride
-                    w1 = j * stride + pool_width
+                    # w1 = j * stride + pool_width
                     # image_chunk = x[n, c, h0:h1, w0:w1]
                     # out[n, c, i, j] = np.max(image_chunk)
                     index = pool_indexes[n, c, i, j]
