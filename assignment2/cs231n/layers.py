@@ -527,11 +527,32 @@ def max_pool_forward_naive(x, pool_param):
     ###########################################################################
     # TODO: Implement the max pooling forward pass                            #
     ###########################################################################
-    pass
+    N, C, H, W = x.shape
+    stride, pool_height, pool_width = \
+        pool_param['stride'], pool_param['pool_height'], pool_param['pool_width']
+    h_out = int(1 + (H - pool_height) / stride)
+    w_out = int(1 + (W - pool_width) / stride)
+    out = np.empty((N, C, h_out, w_out))
+    pool_indexes = np.empty_like(out)
+    for n in range(0, N):
+        for c in range(0, C):
+            for i in range(0, h_out):
+                for j in range(0, w_out):
+                    h0 = i * stride
+                    h1 = i * stride + pool_height
+                    w0 = j * stride
+                    w1 = j * stride + pool_width
+                    image_chunk = x[n, c, h0:h1, w0:w1]
+                    out[n, c, i, j] = np.max(image_chunk)
+                    #print(image_chunk)
+                    #print(np.max(image_chunk))
+                    #print(np.argmax(image_chunk))
+                    pool_indexes[n, c, i, j] = int(np.argmax(image_chunk))
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
-    cache = (x, pool_param)
+    #print(pool_indexes)
+    cache = (x, pool_param, pool_indexes)
     return out, cache
 
 
@@ -546,11 +567,38 @@ def max_pool_backward_naive(dout, cache):
     Returns:
     - dx: Gradient with respect to x
     """
-    dx = None
+    # dx = None
     ###########################################################################
     # TODO: Implement the max pooling backward pass                           #
     ###########################################################################
-    pass
+    x, pool_param, pool_indexes = cache
+    N, C, H, W = x.shape
+    stride, pool_height, pool_width = \
+        pool_param['stride'], pool_param['pool_height'], pool_param['pool_width']
+    h_out = int(1 + (H - pool_height) / stride)
+    w_out = int(1 + (W - pool_width) / stride)
+    # out = np.empty((N, C, h_out, w_out))
+    dx = np.zeros_like(x)
+    for n in range(0, N):
+        for c in range(0, C):
+            for i in range(0, h_out):
+                for j in range(0, w_out):
+                    h0 = i * stride
+                    h1 = i * stride + pool_height
+                    w0 = j * stride
+                    w1 = j * stride + pool_width
+                    # image_chunk = x[n, c, h0:h1, w0:w1]
+                    # out[n, c, i, j] = np.max(image_chunk)
+                    index = pool_indexes[n, c, i, j]
+                    orig_i = h0 + int(index / pool_height)
+                    orig_j = w0 + int(index % pool_height)
+                    dx[n, c, orig_i, orig_j] = dout[n, c, i, j]
+                    # print(index)
+                    # print(n, c, orig_i, orig_j)
+                    # print(dout[n, c, i, j])
+                    # print("_____")
+                    # if i == 2:
+                    #     raise("end")
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
