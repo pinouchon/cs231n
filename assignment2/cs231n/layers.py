@@ -636,12 +636,24 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     # version of batch normalization defined above. Your implementation should#
     # be very short; ours is less than five lines.                            #
     ###########################################################################
-    pass
+    N, C, H, W = x.shape
+
+    # naive implementation
+    # out = np.empty_like(x)
+    # cache = np.empty(shape=(C,))
+    # for i in range(0, C):
+    #     x_prime = x[:, i, :, :].reshape(N, -1)
+    #     result, cache[i] = batchnorm_forward(x_prime, gamma[i], beta[i], bn_param)
+    #     out[:, i, :, :] = result.reshape(N, H, W)
+
+    # vectorized implementation
+    x_swapped = np.swapaxes(x, 0, 1)
+    out, cache = batchnorm_forward(x_swapped.reshape(C, N*H*W).T, gamma, beta, bn_param)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
 
-    return out, cache
+    return out.T.reshape(C, N, H, W).swapaxes(1, 0), cache
 
 
 def spatial_batchnorm_backward(dout, cache):
@@ -666,12 +678,17 @@ def spatial_batchnorm_backward(dout, cache):
     # version of batch normalization defined above. Your implementation should#
     # be very short; ours is less than five lines.                            #
     ###########################################################################
-    pass
+    N, C, H, W = dout.shape
+    dout_swapped = np.swapaxes(dout, 0, 1)
+
+    dx, dgamma, dbeta = batchnorm_backward_alt(
+        dout_swapped.reshape(C, N*H*W).T, cache
+    )
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
 
-    return dx, dgamma, dbeta
+    return dx.T.reshape(C, N, H, W).swapaxes(1, 0), dgamma, dbeta
 
 
 def svm_loss(x, y):
