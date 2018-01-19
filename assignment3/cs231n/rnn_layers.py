@@ -142,6 +142,7 @@ def rnn_backward(dh, cache):
     # sequence of data. You should use the rnn_step_backward function that you   #
     # defined above. You can use a for loop to help compute the backward pass.   #
     ##############################################################################
+<<<<<<< HEAD
     #N, T, D = dx.shape
     #N, H = dh0.shape
     #h = np.empty((N, T, H))
@@ -160,6 +161,9 @@ def rnn_backward(dh, cache):
         dWx += _dWx
         dWh += _dWh
         db += _db
+=======
+
+>>>>>>> aaa6f80f93b851b8e450081c98bb8aab8b7b5156
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
