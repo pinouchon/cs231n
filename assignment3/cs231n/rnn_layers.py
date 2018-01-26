@@ -148,18 +148,21 @@ def rnn_backward(dh, cache):
     #next_h = h0
     N, T, D, H, h0, cache_steps = cache
     dx = np.zeros((N, T, D))
-    dh0 = np.zeros((N, H))
+    # dh0 = np.zeros((N, H))
     dWx = np.zeros((D, H))
     dWh = np.zeros((H, H))
     db = np.zeros(H)
-    _dprev_h = dh
-    for t in range(T, 0, -1):
-        _dx, _dprev_h, _dWx, _dWh, _db = rnn_step_backward(_dprev_h, cache_steps[t])
-        dx += _dx
-        dh0 += _dprev_h
+
+    #_dprev_h = dh
+    _dprev_h = 0
+    for t in reversed(range(T)):
+        dh_all = dh[:, t, :] + _dprev_h
+        _dx, _dprev_h, _dWx, _dWh, _db = rnn_step_backward(dh_all, cache_steps[t])
+        dx[:, t, :] = _dx
         dWx += _dWx
         dWh += _dWh
         db += _db
+    dh0 = _dprev_h
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
